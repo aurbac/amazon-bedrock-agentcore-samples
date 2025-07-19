@@ -89,7 +89,7 @@ The script uses the **[video_games_sales_no_headers.csv](./resources/database/vi
 
 ## Next Step
 
-You can now proceed to the **[Agent Deployment - Strands Agent Infrastructure Deployment with AgentCore]((../agentcore-strands-data-analyst-assistant/))**.
+You can now proceed to the **[Agent Deployment - Strands Agent Infrastructure Deployment with AgentCore](../agentcore-strands-data-analyst-assistant/))**.
 
 ## Cleaning-up Resources (Optional)
 
