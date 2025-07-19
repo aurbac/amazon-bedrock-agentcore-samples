@@ -113,7 +113,7 @@ agentcore invoke '{"prompt": "Give me a summary of our conversation", "session_i
 
 ## Next Step
 
-You can now proceed to the **[Front-End Implementation - Integrating AgentCore with a Ready-to-Use Data Analyst Assistant Application](../agentcore-strands-data-analyst-assistant/))**.
+You can now proceed to the **[Front-End Implementation - Integrating AgentCore with a Ready-to-Use Data Analyst Assistant Application](../amplify-video-games-sales-assistant-agentcore-strands/))**.
 
 ## Cleaning-up Resources (Optional)
 
