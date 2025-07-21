@@ -66,7 +66,7 @@ The AWS CDK stack deploys and configures the following managed services:
 > You can also change the data source to connect to your preferred database engine by adapting the Agent's instructions and tool implementations.
 
 > [!IMPORTANT] 
-> Enhance AI safety and compliance by implementing [Amazon Bedrock Guardrails](https://aws.amazon.com/bedrock/guardrails/) for your AI applications with the seamless integration offered by **[Strands Agents SDK](https://strandsagents.com/latest/user-guide/safety-security/guardrails/)**.
+> Enhance AI safety and compliance by implementing **[Amazon Bedrock Guardrails](https://aws.amazon.com/bedrock/guardrails/)** for your AI applications with the seamless integration offered by **[Strands Agents SDK](https://strandsagents.com/latest/user-guide/safety-security/guardrails/)**.
 
 The **user interaction workflow** operates as follows:
 
