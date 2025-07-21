@@ -40,7 +40,7 @@ cdk deploy
 
 Default Parameters:
 - **ProjectId**: "agentcore-data-analyst-assistant" - Project identifier used for naming resources
-- **DatabaseName**: "video_games_sales" - Nombre de la base de datos
+- **DatabaseName**: "video_games_sales" - Name of the database
 
 Deployed Resources:
 
@@ -48,7 +48,17 @@ Deployed Resources:
 - S3 bucket for data import
 - Secrets Manager secret for database credentials
 - DynamoDB Tables for tracking questions query details and agent interactions
-- Parameter Store for application configuration management
+- Parameter Store for application configuration management:
+  - `/<projectId>/AGENT_INTERACTIONS_TABLE_NAME`: DynamoDB agent interactions table name
+  - `/<projectId>/AWS_REGION`: AWS region
+  - `/<projectId>/SECRET_ARN`: Database secret ARN
+  - `/<projectId>/AURORA_RESOURCE_ARN`: Aurora cluster ARN
+  - `/<projectId>/DATABASE_NAME`: Database name
+  - `/<projectId>/QUESTION_ANSWERS_TABLE`: DynamoDB question answers table name
+  - `/<projectId>/MAX_RESPONSE_SIZE_BYTES`: Maximum response size in bytes (1MB)
+  - `/<projectId>/MEMORY_ID`: AgentCore Memory ID for the Agent
+
+  These parameters are automatically retrieved by the Strands Agent to establish database connections, track interactions, and configure agent behavior.
 
 > [!IMPORTANT] 
 > Enhance AI safety and compliance by implementing **[Amazon Bedrock Guardrails](https://aws.amazon.com/bedrock/guardrails/)** for your AI applications with the seamless integration offered by **[Strands Agents SDK](https://strandsagents.com/latest/user-guide/safety-security/guardrails/)**.
@@ -66,12 +76,14 @@ export SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME
 export DATA_SOURCE_BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DataSourceBucketName'].OutputValue" --output text)
 export AURORA_SERVERLESS_DB_CLUSTER_ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='AuroraServerlessDBClusterARN'].OutputValue" --output text)
 export AGENT_CORE_ROLE_EXECUTION=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='AgentCoreMyRoleARN'].OutputValue" --output text)
+export MEMORY_ID_SSM_PARAMETER=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='MemoryIdSSMParameter'].OutputValue" --output text)
 cat << EOF
 STACK_NAME: ${STACK_NAME}
 SECRET_ARN: ${SECRET_ARN}
 DATA_SOURCE_BUCKET_NAME: ${DATA_SOURCE_BUCKET_NAME}
 AURORA_SERVERLESS_DB_CLUSTER_ARN: ${AURORA_SERVERLESS_DB_CLUSTER_ARN}
 AGENT_CORE_ROLE_EXECUTION: ${AGENT_CORE_ROLE_EXECUTION}
+MEMORY_ID_SSM_PARAMETER: ${MEMORY_ID_SSM_PARAMETER}
 EOF
 
 ```

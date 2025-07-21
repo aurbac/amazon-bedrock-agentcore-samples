@@ -9,6 +9,7 @@ It leverages Bedrock Agent Core for agent functionality and memory management.
 import logging
 import json
 from uuid import uuid4
+import os
 
 # Bedrock Agent Core imports
 from bedrock_agentcore import BedrockAgentCoreApp
@@ -16,44 +17,37 @@ from bedrock_agentcore.memory import MemoryClient
 from strands import Agent, tool
 from strands_tools import current_time
 from strands.models import BedrockModel
-from botocore.exceptions import ClientError
 
 # Custom module imports
 from src.MemoryHookProvider import MemoryHookProvider
 from src.tools import get_tables_information, load_file_content
 from src.rds_data_api_utils import run_sql_query
 from src.utils import save_raw_query_result, read_messages_by_session, save_agent_interactions
+from src.ssm_utils import get_ssm_parameter
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("personal-agent")
 
-# Initialize Memory Client for conversation history
-client = MemoryClient(region_name='us-west-2', environment="prod")
-memory_name = "AssistantAgentMemory"
-
+# Read memory ID from SSM Parameter Store
 try:
-    # Create memory resource for short-term conversation storage
-    memory = client.create_memory_and_wait(
-        name=memory_name,
-        strategies=[],  # No strategies means only short-term memory is used
-        description="Short-term memory for data analyst assistant",
-        event_expiry_days=7,  # Retention period for short-term memory (up to 365 days)
-    )
-    memory_id = memory['memoryId']
-    logger.info(f"✅ Created memory: {memory_id}")
-except ClientError as e:
-    logger.info(f"❌ ERROR: {e}")
-    if e.response['Error']['Code'] == 'ValidationException' and "already exists" in str(e):
-        # If memory already exists, retrieve its ID
-        memories = client.list_memories()
-        memory_id = next((m['id'] for m in memories if m['id'].startswith(memory_name)), None)
-        logger.info(f"Memory already exists. Using existing memory ID: {memory_id}")
+    # Read memory ID from SSM
+    memory_id = get_ssm_parameter("MEMORY_ID")
+    
+    # Check if memory ID is empty
+    if not memory_id or memory_id.strip() == "":
+        error_msg = "Memory ID from SSM is empty. Memory has not been created yet."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+        
+    logger.info(f"Retrieved memory ID from SSM: {memory_id}")
+    
+    # Initialize Memory Client
+    client = MemoryClient(region_name='us-west-2', environment="prod")
+    
 except Exception as e:
-    # Log any errors during memory creation
-    logger.error(f"❌ ERROR: {e}")
-    import traceback
-    traceback.print_exc()
+    logger.error(f"Error retrieving memory ID from SSM: {e}")
+    raise  # Re-raise the exception to stop execution
 
 
 # Initialize the Bedrock Agent Core app

@@ -6,8 +6,8 @@ Deploy the Strands Agent Data Analyst Assistant for Video Game Sales using **[AW
 
 This tutorial guides you through deploying a video game sales data analyst agent using Amazon Bedrock AgentCore's managed infrastructure, includes the following modular services:
 
-- **Amazon Bedrock AgentCore Runtime**: Provides the managed execution environment with invocation endpoints (`/invocations`) and health monitoring (`/ping`) for your agent instances
-- **Amazon Bedrock AgentCore Memory**: A fully managed service that gives AI agents the ability to remember, learn, and evolve through interactions by capturing events, transforming them into memories, and retrieving relevant context when needed
+- **[Amazon Bedrock AgentCore Runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html)**: Provides the managed execution environment with invocation endpoints (`/invocations`) and health monitoring (`/ping`) for your agent instances
+- **[Amazon Bedrock AgentCore Memory](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/memory.html)**: A fully managed service that gives AI agents the ability to remember, learn, and evolve through interactions by capturing events, transforming them into memories, and retrieving relevant context when needed
 
 Don't forget to review the **[Amazon Bedrock AgentCore documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/what-is-bedrock-agentcore.html)**.
 
@@ -30,6 +30,26 @@ Before you begin, ensure you have:
     ```bash
     pip install -r requirements.txt
     ```
+
+## Create Short-Term AgentCore Memory
+
+Before deploying your agent, you need to create a **[short-term memory](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/short-term-memory.html)** store that will help your agent maintain conversation context:
+
+1. Create a memory store with a 7-day default expiry period:
+
+```bash
+python3 resources/memory_manager.py create DataAnalystAssistantMemory ${MEMORY_ID_SSM_PARAMETER}
+```
+
+2. Validate that your memory store was created successfully:
+
+```bash
+# List all available memory stores to confirm creation
+python3 resources/memory_manager.py list
+```
+
+This memory store enables your agent to remember previous interactions within the same session, providing a more coherent and contextual conversation experience.
+
 
 ## Local Testing
 
@@ -77,13 +97,13 @@ curl -X POST http://localhost:8080/invocations \
 
 Deploy your agent to AWS with these simple steps:
 
-1. Configure the agent deployment:
+1. Configure the agent deployment accepting default values when prompted:
 
 ```bash
 agentcore configure --entrypoint app.py --name agentcoredataanalystassistant -er $AGENT_CORE_ROLE_EXECUTION
 ```
 
-2. Launch the agent infrastructure accepting default values when prompted:
+2. Launch the agent infrastructure:
 
 ```bash
 agentcore launch
@@ -117,11 +137,7 @@ You can now proceed to the **[Front-End Implementation - Integrating AgentCore w
 
 ## Cleaning-up Resources (Optional)
 
-To avoid unnecessary charges, delete the AgentCore run environment:
-
-```bash
-agentcore delete
-```
+To avoid unnecessary charges, delete the AgentCore run environment from the AWS Console.
 
 ## Thank You
 

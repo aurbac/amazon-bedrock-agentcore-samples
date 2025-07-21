@@ -90,7 +90,8 @@ def load_config(region_name=None):
         "DATABASE_NAME",
         "QUESTION_ANSWERS_TABLE",
         "MAX_RESPONSE_SIZE_BYTES",
-        "AGENT_INTERACTIONS_TABLE_NAME"
+        "AGENT_INTERACTIONS_TABLE_NAME",
+        "MEMORY_ID"
     ]
     
     config = {}

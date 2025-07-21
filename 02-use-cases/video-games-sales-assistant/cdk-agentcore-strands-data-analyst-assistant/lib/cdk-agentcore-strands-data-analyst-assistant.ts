@@ -23,36 +23,6 @@ export class CdkAgentCoreStrandsDataAnalystAssistantStack extends cdk.Stack {
       default: "video_games_sales",
     });
 
-    // Create AgentCoreMyRole with AdministratorAccess policy
-    const agentCoreRole = new iam.Role(this, 'AgentCoreMyRole', {
-      roleName: `AgentCoreExecution-${projectId.valueAsString}-${this.region}-${this.account}`,
-      assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')
-      ]
-    });
-
-    // Add the specific trust relationship with sts:TagSession permission
-    (agentCoreRole.node.defaultChild as iam.CfnRole).addPropertyOverride(
-      'AssumeRolePolicyDocument',
-      {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Sid: 'Statement1',
-            Effect: 'Allow',
-            Principal: {
-              Service: 'bedrock-agentcore.amazonaws.com'
-            },
-            Action: [
-              'sts:AssumeRole',
-              'sts:TagSession'
-            ]
-          }
-        ]
-      }
-    );
-
     // Create the DynamoDB table for raw query results
     const rawQueryResults = new dynamodb.Table(this, "RawQueryResults", {
       partitionKey: {
@@ -160,6 +130,214 @@ export class CdkAgentCoreStrandsDataAnalystAssistantStack extends cdk.Stack {
       storageEncrypted: true, // Ensure storage encryption
     });
 
+    // Now that we have created all the resources, we can create the AgentCoreMyRole with the correct permissions
+    const agentCoreRole = new iam.Role(this, 'AgentCoreMyRole', {
+      roleName: `AgentCoreExecution-${projectId.valueAsString}-${this.region}`,
+      assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
+      inlinePolicies: {
+        'AgentCoreExecutionPolicy': new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              sid: 'ECRImageAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'ecr:BatchGetImage',
+                'ecr:GetDownloadUrlForLayer'
+              ],
+              resources: [
+                `arn:aws:ecr:${this.region}:${this.account}:repository/*`
+              ]
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:DescribeLogStreams',
+                'logs:CreateLogGroup'
+              ],
+              resources: [
+                `arn:aws:logs:${this.region}:${this.account}:log-group:/aws/bedrock-agentcore/runtimes/*`
+              ]
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:DescribeLogGroups'
+              ],
+              resources: [
+                `arn:aws:logs:${this.region}:${this.account}:log-group:*`
+              ]
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:CreateLogStream',
+                'logs:PutLogEvents'
+              ],
+              resources: [
+                `arn:aws:logs:${this.region}:${this.account}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*`
+              ]
+            }),
+            new iam.PolicyStatement({
+              sid: 'ECRTokenAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'ecr:GetAuthorizationToken'
+              ],
+              resources: ['*']
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'xray:PutTraceSegments',
+                'xray:PutTelemetryRecords',
+                'xray:GetSamplingRules',
+                'xray:GetSamplingTargets'
+              ],
+              resources: ['*']
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: ['cloudwatch:PutMetricData'],
+              resources: ['*'],
+              conditions: {
+                StringEquals: {
+                  'cloudwatch:namespace': 'bedrock-agentcore'
+                }
+              }
+            }),
+            new iam.PolicyStatement({
+              sid: 'GetAgentAccessToken',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'bedrock-agentcore:GetWorkloadAccessToken',
+                'bedrock-agentcore:GetWorkloadAccessTokenForJWT',
+                'bedrock-agentcore:GetWorkloadAccessTokenForUserId'
+              ],
+              resources: [
+                `arn:aws:bedrock-agentcore:${this.region}:${this.account}:workload-identity-directory/default`,
+                `arn:aws:bedrock-agentcore:${this.region}:${this.account}:workload-identity-directory/default/workload-identity/*`
+              ]
+            }),
+            new iam.PolicyStatement({
+              sid: 'BedrockModelInvocation',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'bedrock:InvokeModel',
+                'bedrock:InvokeModelWithResponseStream'
+              ],
+              resources: [
+                'arn:aws:bedrock:*::foundation-model/*',
+                `arn:aws:bedrock:${this.region}:${this.account}:*`
+              ]
+            }),
+            // New permissions for RDS Data API
+            new iam.PolicyStatement({
+              sid: 'RDSDataAPIAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'rds-data:ExecuteStatement',
+                'rds-data:BatchExecuteStatement'
+              ],
+              resources: [
+                cluster.clusterArn
+              ]
+            }),
+            // New permissions for Secrets Manager
+            new iam.PolicyStatement({
+              sid: 'SecretsManagerAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'secretsmanager:GetSecretValue'
+              ],
+              resources: [
+                secret.secretArn
+              ]
+            }),
+            // New permissions for SSM Parameter Store
+            new iam.PolicyStatement({
+              sid: 'SSMParameterAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'ssm:GetParameter',
+                'ssm:GetParameters'
+              ],
+              resources: [
+                `arn:aws:ssm:${this.region}:${this.account}:parameter/${projectId.valueAsString}/*`
+              ]
+            }),
+            // Permissions for DynamoDB
+            new iam.PolicyStatement({
+              sid: 'DynamoDBTableAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'dynamodb:Query',
+                'dynamodb:Scan',
+                'dynamodb:GetItem',
+                'dynamodb:PutItem',
+                'dynamodb:UpdateItem'
+              ],
+              resources: [
+                rawQueryResults.tableArn,
+                agentInteractionsTable.tableArn
+              ]
+            }),
+            // Permissions for AgentCore Memory
+            new iam.PolicyStatement({
+              sid: 'BedrockAgentCoreMemoryAccess',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'bedrock-agentcore:GetMemoryRecord',
+                'bedrock-agentcore:GetMemory',
+                'bedrock-agentcore:RetrieveMemoryRecords',
+                'bedrock-agentcore:DeleteMemoryRecord',
+                'bedrock-agentcore:ListMemoryRecords',
+                'bedrock-agentcore:CreateEvent',
+                'bedrock-agentcore:ListSessions',
+                'bedrock-agentcore:ListEvents',
+                'bedrock-agentcore:GetEvent'
+              ],
+              resources: [
+                `*`
+              ]
+            }),
+            new iam.PolicyStatement({
+              sid: 'BedrockModelInvocationMemory',
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'bedrock:InvokeModel',
+                'bedrock:InvokeModelWithResponseStream'
+              ],
+              resources: [
+                'arn:aws:bedrock:*::foundation-model/*',
+                'arn:aws:bedrock:*:*:inference-profile/*'
+              ]
+            }),
+          ]
+        })
+      }
+    });
+
+    // Add the specific trust relationship with sts:TagSession permission
+    (agentCoreRole.node.defaultChild as iam.CfnRole).addPropertyOverride(
+      'AssumeRolePolicyDocument',
+      {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Sid: 'Statement1',
+            Effect: 'Allow',
+            Principal: {
+              Service: 'bedrock-agentcore.amazonaws.com'
+            },
+            Action: [
+              'sts:AssumeRole',
+              'sts:TagSession'
+            ]
+          }
+        ]
+      }
+    );
+
     // Grant S3 access to the role
     auroraS3Role.addToPolicy(
       new iam.PolicyStatement({
@@ -250,6 +428,13 @@ export class CdkAgentCoreStrandsDataAnalystAssistantStack extends cdk.Stack {
       type: 'String'
     });
 
+    new ssm.CfnParameter(this, 'MemoryIdParam', {
+      name: `/${projectId.valueAsString}/MEMORY_ID`,
+      value: "AssistantAgentMemoryIdToBeCreated",
+      description: 'Memory ID for the agent',
+      type: 'String'
+    });
+
     // Stack outputs
 
     new cdk.CfnOutput(this, "AuroraServerlessDBClusterARN", {
@@ -288,6 +473,11 @@ export class CdkAgentCoreStrandsDataAnalystAssistantStack extends cdk.Stack {
       description: "The ARN of the AgentCoreMyRole",
       exportName: `${projectId.valueAsString}-AgentCoreMyRoleARN`,
     });
-
+    
+    new cdk.CfnOutput(this, "MemoryIdSSMParameter", {
+      value: `/${projectId.valueAsString}/MEMORY_ID`,
+      description: "The SSM parameter name for the memory ID",
+      exportName: `${projectId.valueAsString}-MemoryIdSSMParameter`,
+    });
   }
 }
