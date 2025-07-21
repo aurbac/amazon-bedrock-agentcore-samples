@@ -1,154 +1,117 @@
-# Front-End Implementation - Integrating AgentCore with a Ready-to-Use Data Analyst Assistant Application
+# Deploying a Conversational Data Analyst Assistant Solution with Amazon Bedrock AgentCore
 
-A powerful React-based web application that integrates with **[AWS Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/)** to provide an intelligent data analysis interface for video game sales data.
+This solution provides a Generative AI application reference that allows users to interact with data through a natural language interface. The solution leverages **[AWS Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/)**, a managed service that enables you to deploy, run, and scale custom agent applications, along with the **[Strands Agents SDK](https://strandsagents.com/)** to build an agent that connects to a PostgreSQL database, providing data analysis capabilities through a web application interface.
 
-## Overview
+<div align="center">
+<img src="./images/data-analyst-assistant-agentcore-strands-agents-sdk.gif" alt="Conversational Data Analyst Assistant Solution with Amazon Bedrock AgentCore">
+</div>
 
-This application creates a conversational AI assistant that can analyze video game sales data through natural language queries. The integration utilizes **Amazon Bedrock AgentCore** to deploy and operate AI agents securely at scale using any framework and model.
+🤖 A Data Analyst Assistant offers an approach to data analysis that enables enterprises to interact with their structured data through natural language conversations rather than complex SQL queries. This kind of assistant provides an intuitive question-answering for data analysis conversations and can be improved by offering data visualizations to enhance the user experience.
 
-The application uses the **[InvokeAgentRuntimeCommand](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/bedrock-agentcore/command/InvokeAgentRuntimeCommand/)** from the AWS JavaScript SDK v3 to interact with the deployed AgentCore infrastructure.
+✨ This solution enables users to:
 
-### Key Features
+- Ask questions about video game sales data in natural language
+- Receive AI-generated responses based on SQL queries to a PostgreSQL database
+- View query results in tabular format
+- Explore data through automatically generated visualizations
+- Get insights and analysis from the AI assistant
 
-- **Conversational AI Interface**: Chat with an intelligent assistant powered by Claude 3.5 Sonnet
-- **Tabular Data Display**: View raw query results in organized tables
-- **Dynamic Data Visualization**: Automatically generates chart visualizations
+🚀 This reference solution can help you explore use cases like:
+
+- Empower analysts with real-time business intelligence
+- Provide quick answers to C-level executives for common business questions
+- Unlock new revenue streams through data monetization (consumer behavior, audience segmentation)
+- Optimize infrastructure through performance insights
+
+## Solution Overview
+
+The following architecture diagram illustrates a reference solution for a generative AI data analyst assistant that is built using Strands Agents SDK and powered by Amazon Bedrock. This assistant enables users to access structured data that is stored in a PostgreSQL database through a question-answering interface.
+
+![Video Games Sales Assistant](./images/gen-ai-assistant-diagram.png)
 
 > [!IMPORTANT]
-> This sample application is for demonstration purposes only and is not production-ready. Please validate the code against your organization's security best practices.
+> This sample application is meant for demo purposes and is not production ready. Please make sure to validate the code with your organizations security best practices.
 
-## Prerequisites
+### AgentCore Runtime & Memory Infrastructure
 
-Ensure you have the following installed and configured:
+**Amazon Bedrock AgentCore** is a fully managed service that enables you to deploy, run, and scale your custom agent applications with built-in runtime and memory capabilities.
 
-- **[Agent Deployment - Strands Agent Infrastructure Deployment with AgentCore](../agentcore-strands-data-analyst-assistant)**
-- **Node.js 18+**
-- **React Scripts** - Install with: `npm install react-scripts`
+- **[Amazon Bedrock AgentCore Runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html)**: Provides the managed execution environment with invocation endpoints (`/invocations`) and health monitoring (`/ping`) for your agent instances
+- **[Amazon Bedrock AgentCore Memory](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/memory.html)**: A fully managed service that gives AI agents the ability to remember, learn, and evolve through interactions by capturing events, transforming them into memories, and retrieving relevant context when needed
 
-## Set Up the Front-End Application
+The AgentCore infrastructure handles all storage complexity and provides efficient retrieval without requiring developers to manage underlying infrastructure, ensuring continuity and traceability across agent interactions.
 
-Install the React application dependencies:
+### CDK Infrastructure Deployment
 
-``` bash
-npm install
-```
+The AWS CDK stack deploys and configures the following managed services:
 
-## Configure IAM User Access for Front-End Permissions
+- **IAM AgentCore Execution Role**: Provides necessary permissions for Amazon Bedrock AgentCore execution
+- **VPC and Private Subnet**: Network isolation and security for database resources
+- **Amazon Aurora Serverless PostgreSQL**: Stores the video game sales data with RDS Data API integration
+- **Amazon DynamoDB**: Tracks raw query results and agent interactions
+- **Parameter Store Configuration Management**: Securely manages application configuration
 
-- [Create an IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)
-- [Create Access key and Secret access key](https://docs.aws.amazon.com/keyspaces/latest/devguide/create.keypair.html) for programmatic access
-- Add an inline policy to this user with the following JSON (replace placeholder values with your actual ARNs).
+### Strands Agent Features
 
-Update the values with your **<account_id>** and **<question_answers_table_arn>**, which you can find in the outputs from the CDK project, and the **<agent_runtime_arn>** that was created previously.
+| Feature | Description |
+|----------|----------|
+| Native Tools   | current_time - A built-in Strands tool that provides the current date and time information based on user's timezone. |
+| Custom Tools | get_tables_information - A custom tool that retrieves metadata about the database tables, including their structure, columns, and relationships, to help the agent understand the database schema.<br>execute_sql_query - A custom tool that allows the agent to run SQL queries against the PostgreSQL database based on the user's natural language questions, retrieving the requested data for analysis. |
+| Model Provider | Amazon Bedrock |
 
-``` json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "InvokeBedrockModel",
-            "Effect": "Allow",
-            "Action": [
-                "bedrock:InvokeModel"
-            ],
-            "Resource": [
-                "arn:aws:bedrock:*:<account_id>:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0",
-                "arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
-                "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
-                "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
-            ]
-        },
-        {
-            "Sid": "DynamoDB",
-            "Effect": "Allow",
-            "Action": [
-                "dynamodb:Query"
-            ],
-            "Resource": "<question_answers_table_arn>"
-        },
-        {
-            "Sid": "BedrockAgentCorePermissions",
-            "Effect": "Allow",
-            "Action": "bedrock-agentcore:InvokeAgentRuntime",
-            "Resource": [
-                "<agent_runtime_arn>",
-                "<agent_runtime_arn>/runtime-endpoint/*"
-            ]
-        }
-    ]
-}
-```
-
-## Configure Environment Variables
-
-- Rename the file **src/sample.env.js** to **src/env.js** and update the following environment variables:
-
-    - AWS Credentials and Region:
-        - **ACCESS_KEY_ID**
-        - **SECRET_ACCESS_KEY**
-        - **AWS_REGION**
-
-    - You can find the DynamoDB table name in the CloudFormation Outputs from the CDK project:
-        - **QUESTION_ANSWERS_TABLE_NAME** 
-
-    - Also, you can update the general application description:
-        - **APP_NAME**
-        - **APP_SUBJECT**
-        - **WELCOME_MESSAGE**
-
-    - Amazon Bedrock AgentCore Runtime information you can find in the AWS Console
-        - **AGENT_RUNTIME_ARN**
-        - **AGENT_ENDPOINT_NAME**
-        - **LAST_K_TURNS** AgentCore Memory value to retrieve the last K conversation turns for context memory
-  
-
-## Test Your Data Analyst Assistant
-
-Start the application locally:
-
-``` bash
-npm start
-```
-
-Try these sample questions to test the assistant:
-
-- Hello!
-- How can you help me?
-- What is the structure of the data?
-- Which developers tend to get the best reviews?
-- What were the total sales for each region between 2000 and 2010? Give me the data in percentages.
-- What were the best-selling games in the last 10 years?
-- What are the best-selling video game genres?
-- Give me the top 3 game publishers.
-- Give me the top 3 video games with the best reviews and the best sales.
-- Which is the year with the highest number of games released?
-- Which are the most popular consoles and why?
-- Give me a short summary and conclusion of our conversation.
+> [!NOTE]
+> This solution references the use of AWS IAM credentials to connect to Amazon Bedrock AgentCore and Amazon DynamoDB. 🚀 For production deployment, consider integrating Amazon Cognito or another identity provider for proper authentication and authorization instead of using IAM user credentials.
 
 > [!TIP]
-> 🚀 For production deployment, consider using **[AWS Amplify Hosting](https://aws.amazon.com/amplify/hosting/)** and integrate Amazon Cognito or another identity provider for proper authentication and authorization instead of using IAM user credentials.
+> You can also change the data source to connect to your preferred database engine by adapting the Agent's instructions and tool implementations.
+
+> [!IMPORTANT] 
+> Enhance AI safety and compliance by implementing [Amazon Bedrock Guardrails](https://aws.amazon.com/bedrock/guardrails/) for your AI applications with the seamless integration offered by **[Strands Agents SDK](https://strandsagents.com/latest/user-guide/safety-security/guardrails/)**.
+
+The **user interaction workflow** operates as follows:
+
+- The web application sends user business questions to the AgentCore Invoke
+- The Strands Agent (powered by Claude 3.7 Sonnet) processes natural language and determines when to execute database queries
+- The agent's built-in tools execute SQL queries against the Aurora PostgreSQL database and formulate an answer to the question
+- AgentCore Memory captures session interactions and retrieves previous conversations for context
+- After the agent's response is received by the web application, the raw data query results are retrieved from the DynamoDB table to display both the answer and the corresponding records
+- For chart generation, the application invokes a model (powered by Claude 3.5 Sonnet) to analyze the agent's answer and raw data query results to generate the necessary data to render an appropriate chart visualization
+
+## Deployment Instructions
+
+The deployment consists of two main steps:
+
+1. **Back-End Deployment - [Data Source and Configuration Management Deployment with CDK](./cdk-agentcore-strands-data-analyst-assistant/)**
+1. **Agent Deployment - [Strands Agent Infrastructure Deployment with AgentCore](./agentcore-strands-data-analyst-assistant/)**
+2. **Front-End Implementation - [Integrating AgentCore with a Ready-to-Use Data Analyst Assistant Application](./amplify-video-games-sales-assistant-agentcore-strands/)**
+
+> [!NOTE]
+> *It is recommended to use the Oregon (us-west-2) or N. Virginia (us-east-1) regions to deploy the application.*
+
+> [!IMPORTANT] 
+> Remember to clean up resources after testing to avoid unnecessary costs by following the clean-up steps provided.
 
 ## Application Features
 
-Congratulations! Your Data Analyst Assistant can provide you with the following conversational experience:
+The following images showcase a conversational experience analysis that includes: natural language answers, the reasoning process used by the LLM to generate SQL queries, the database records retrieved from those queries, and the resulting chart visualizations.
 
-![Video Games Sales Assistant](../images/preview.png)
+![Video Games Sales Assistant](./images/preview.png)
 
 - **Conversational interface with an agent responding to user questions**
 
-![Video Games Sales Assistant](../images/preview1.png)
+![Video Games Sales Assistant](./images/preview1.png)
 
 - **Raw query results displayed in tabular format**
 
-![Video Games Sales Assistant](../images/preview2.png)
+![Video Games Sales Assistant](./images/preview2.png)
 
 - **Chart visualization generated from the agent's answer and the data query results (created using [Apexcharts](https://apexcharts.com/))**.
 
-![Video Games Sales Assistant](../images/preview3.png)
+![Video Games Sales Assistant](./images/preview3.png)
 
 - **Summary and conclusion derived from the data analysis conversation**
 
-![Video Games Sales Assistant](../images/preview4.png)
+![Video Games Sales Assistant](./images/preview4.png)
 
 ## Thank You
 
