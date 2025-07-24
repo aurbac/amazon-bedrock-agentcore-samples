@@ -43,7 +43,7 @@ try:
     logger.info(f"Retrieved memory ID from SSM: {memory_id}")
     
     # Initialize Memory Client
-    client = MemoryClient(region_name='us-west-2', environment="prod")
+    client = MemoryClient()
     
 except Exception as e:
     logger.error(f"Error retrieving memory ID from SSM: {e}")
