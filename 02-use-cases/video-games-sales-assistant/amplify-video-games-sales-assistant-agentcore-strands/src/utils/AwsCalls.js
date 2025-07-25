@@ -206,7 +206,7 @@ export const invokeAgentCore = async (
         const reader = stream.getReader();
         const decoder = new TextDecoder();
 
-        //try {
+        try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -261,9 +261,9 @@ export const invokeAgentCore = async (
               });
             }
           }
-        //} finally {
-        //  reader.releaseLock();
-        //}
+        } finally {
+          reader.releaseLock();
+        }
       } else {
         // Handle non-streaming response (fallback)
         const bytes = await response.response.transformToByteArray();
